@@ -1,5 +1,6 @@
 from sklearn.neighbors import KernelDensity
 import numpy as np
+import matplotlib.pyplot as plt
 
 train_data = np.genfromtxt('data/Train_data.csv', delimiter=',')
 test_data1 = np.genfromtxt('data/Test_data1.csv', delimiter=',')
@@ -13,7 +14,7 @@ log_density = parzen_estimator.score_samples(train_data)
 log_density1 = parzen_estimator.score_samples(test_data1)
 log_density2 = parzen_estimator.score_samples(test_data2)
 
-threshold = np.percentile(log_density, 5)  # 以5%分位数作为阈值
+threshold = np.percentile(sorted(log_density), 5)  # 以5%分位数作为阈值
 
 def detect_anomalies(log_density, threshold):
     currect = 0.0
@@ -31,3 +32,22 @@ print("Currency in Test Data 1:", currency_test1)
 
 currency_test2 = detect_anomalies(log_density2, threshold)
 print("Currency in Test Data 2:", currency_test2)
+
+
+plt.subplot(1, 2, 1)
+plt.bar(range(1,4001),log_density1)
+plt.title("data analyze")
+plt.xlabel("samples")
+plt.ylabel("scores")
+plt.axhline(y=threshold, color='red', linestyle='--', label='Threshold')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.bar(range(1,4001),log_density2)
+plt.title("data analyze")
+plt.xlabel("samples")
+plt.ylabel("scores")
+plt.axhline(y=threshold, color='red', linestyle='--', label='Threshold')
+plt.legend()
+
+plt.show()
