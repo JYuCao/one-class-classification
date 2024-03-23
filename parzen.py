@@ -14,7 +14,7 @@ log_density = parzen_estimator.score_samples(train_data)
 log_density1 = parzen_estimator.score_samples(test_data1)
 log_density2 = parzen_estimator.score_samples(test_data2)
 
-threshold = np.percentile(sorted(log_density), 5)  # 以5%分位数作为阈值
+threshold = np.percentile(sorted(log_density), 0)  # 以5%分位数作为阈值
 
 def detect_anomalies(log_density, threshold):
     currect = 0.0
