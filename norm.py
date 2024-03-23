@@ -22,12 +22,24 @@ def detect_anomalies(probabilities, threshold):
                 currect += 1
     return currect/4000
 
-threshold = 0.01
+pdf_value = train_mvn.pdf(train_data)
+pdf_value1 = train_mvn.pdf(test_data1)
+pdf_value2 = train_mvn.pdf(test_data2)
+
+threshold = sorted(pdf_value)[0]
 
 # 对测试数据1进行异常检测
-currency_test1 = detect_anomalies(train_mvn.pdf(test_data1), threshold)
+currency_test1 = detect_anomalies(pdf_value1, threshold)
 print("Currency in Test Data 1:", currency_test1)
 
 # 对测试数据2进行异常检测
-currency_test2 = detect_anomalies(train_mvn.pdf(test_data2), threshold)
+currency_test2 = detect_anomalies(pdf_value2, threshold)
 print("Currency in Test Data 2:", currency_test2)
+
+plt.bar(range(1,4001),pdf_value1)
+plt.title("data analyze")
+plt.xlabel("samples")
+plt.ylabel("scores")
+plt.axhline(y=threshold, color='red', linestyle='--', label='Threshold')
+plt.legend()
+plt.show()
