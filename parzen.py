@@ -1,3 +1,4 @@
+# 使用parzen窗进行估计
 from sklearn.neighbors import KernelDensity
 import numpy as np
 import matplotlib.pyplot as plt

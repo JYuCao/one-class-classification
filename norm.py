@@ -1,16 +1,20 @@
+# 使用多元正态分布和概率密度进行估计
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import multivariate_normal
 
+# 读取数据集
 train_data = np.genfromtxt('data/Train_data.csv', delimiter=',')
 test_data1 = np.genfromtxt('data/Test_data1.csv', delimiter=',')
 test_data2 = np.genfromtxt('data/Test_data2.csv', delimiter=',')
 
+# 计算多元正态分布
 train_cov = np.cov(train_data.T)
 train_mean = np.mean(train_data, axis=0)
 train_mvn = multivariate_normal(mean=train_mean, cov=train_cov)
 print(train_mean.shape)
 
+# 统计正确率
 def detect_anomalies(probabilities, threshold):
     currect = 0.0
     for i in range(0, 4000):
@@ -36,6 +40,7 @@ print("Currency in Test Data 1:", currency_test1)
 currency_test2 = detect_anomalies(pdf_value2, threshold)
 print("Currency in Test Data 2:", currency_test2)
 
+# 绘图
 plt.bar(range(1,4001),pdf_value1)
 plt.title("data analyze")
 plt.xlabel("samples")

@@ -1,3 +1,4 @@
+# 使用one class svm进行估计
 import numpy as np
 from sklearn import svm
 import matplotlib.pyplot as plt
