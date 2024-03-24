@@ -22,6 +22,7 @@ for i in range(0, 4000):
     md_test1.append(mahalanobis(test_data1[i], train_data.mean(axis=0), train_cov_inv))
     md_test2.append(mahalanobis(test_data2[i], train_data.mean(axis=0), train_cov_inv))
 
+
 # 统计正确率
 def detect_anomalies_mahalanobis(mahalanobis_distances, threshold):
     correct_count = 0.0
@@ -34,21 +35,30 @@ def detect_anomalies_mahalanobis(mahalanobis_distances, threshold):
                 correct_count += 1
     return correct_count/4000
 
+
 # 测试最佳阈值
-thresholds = [1, 2, 5, 10, 20, 50, 100, 200]
-
-max_currency = 0
-for threshold in thresholds:
-    print("# threshold = ", threshold)
+max_currency1 = 0
+max_currency2 = 0
+t1 = 0
+t2 = 0
+for threshold in np.arange(5, 15, 0.1):
     # 对测试数据1进行异常检测
-    currency_test1 = detect_anomalies_mahalanobis(md_test1, threshold)
-    print("Currency in Test Data 1:", currency_test1)
-    if max_currency < currency_test1:
-        max_currency = currency_test1
-
+    currency_test1 = detect_anomalies_mahalanobis(md_test1, threshold) 
+    if max_currency1 < currency_test1:
+        max_currency1 = currency_test1
+        t1 = threshold
     # 对测试数据2进行异常检测
     currency_test2 = detect_anomalies_mahalanobis(md_test2, threshold)
-    print("Currency in Test Data 2:", currency_test2)
+    if max_currency2 < currency_test2:
+        max_currency2 = currency_test2
+        t2 = threshold
+
+t1 = round(t1, 1)
+t2 = round(t2, 1)
+
+print("# threshold = {}, Currency in Test Data 1: {}".format(t1, max_currency1))
+print("# threshold = {}, Currency in Test Data 1: {}".format(t2, max_currency2))
+
 
 # 绘图
 plt.subplot(1, 2, 1)
@@ -56,7 +66,7 @@ plt.bar(range(1,4001),md_test1)
 plt.title("data analyze")
 plt.xlabel("samples")
 plt.ylabel("scores")
-plt.axhline(y=max_currency, color='red', linestyle='--', label='Threshold = {}'.format(max_currency))
+plt.axhline(y=t1, color='red', linestyle='--', label='Threshold = {}'.format(t1))
 plt.legend()
 
 plt.subplot(1, 2, 2)
@@ -64,6 +74,6 @@ plt.bar(range(1,4001),md_test2)
 plt.title("data analyze")
 plt.xlabel("samples")
 plt.ylabel("scores")
-plt.axhline(y=max_currency, color='red', linestyle='--', label='Threshold')
+plt.axhline(y=t2, color='red', linestyle='--', label='Threshold = {}'.format(t2))
 plt.legend()
 plt.show()
