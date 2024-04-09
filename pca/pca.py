@@ -99,6 +99,7 @@ if __name__ == '__main__':
     k = 1
     while np.sum(sorted_eigenvalues[:k]) / np.sum(eigenvalues) < 0.8:
         k += 1
+    print(f"# k = {k}")
 
     diagonal_matrix = np.diag(sorted_eigenvalues[:k])
     selected_eigenvectors = sorted_eigenvectors[:, :k]

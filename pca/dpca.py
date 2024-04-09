@@ -2,15 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import f
 
-def scatter(transformed_data):
-    # 绘制散点图,仅二维用
-    plt.scatter(transformed_data[2000:, 0], transformed_data[2000:, 1])
-    plt.scatter(transformed_data[:2000, 0], transformed_data[:2000, 1])
-    plt.xlabel('Principal Component 1')
-    plt.ylabel('Principal Component 2')
-    plt.title('Scatter Plot')
-    plt.show()
-
 def load_data():
     # 加载数据
     train_data = np.genfromtxt('data/Train_data.csv', delimiter=',')
@@ -74,90 +65,108 @@ def T_calculate_accuracy(T_2, Ta2, Q, Qa):
     Q_accuracy = (Q_TP + Q_TN) / 4000
     Q_precision = Q_TP / (Q_TP + Q_FP)
     Q_recall = Q_TP / (Q_TP + Q_FN)
+    # print(f"T_TP:{T_TP}, T_FP:{T_FP}, T_TN:{T_TN}, T_FN:{T_FN}")
     print(f"# T: accuracy:{T_accuracy}, precision:{T_precision}, recall:{T_recall}")
     print(f"# Q: accuracy:{Q_accuracy}, precision:{Q_precision}, recall:{Q_recall}")
 
 
 if __name__ == '__main__':
     # 设置滞后阶数
-    lag = 2
+    # lag = 1
 
     # 加载数据
     train_data, test_data1, test_data2 = load_data()
+    for lag in [1, 2, 3, 5, 7, 10, 15, 20, 30, 50]:
+        print(f"# Lag: {lag}")
+        # 得到滞后矩阵
+        augmented_data = getAugmentedData(train_data, lag)
 
-    # 得到滞后矩阵
-    augmented_data = getAugmentedData(train_data, lag)
+        # 归一化训练数据
+        mean = np.mean(augmented_data, axis=0)
+        std = np.std(augmented_data, axis=0)
+        normalized_data_train = normalized(augmented_data, mean, std)
 
-    # 归一化训练数据
-    mean = np.mean(augmented_data, axis=0)
-    std = np.std(augmented_data, axis=0)
-    normalized_data_train = normalized(augmented_data, mean, std)
+        # 计算协方差矩阵
+        standardized_covariance_matrix = np.dot(normalized_data_train.T, normalized_data_train/(4000-1))
 
-    # 计算协方差矩阵
-    standardized_covariance_matrix = np.dot(normalized_data_train.T, normalized_data_train/(4000-1))
+        # 计算协方差矩阵的特征值和特征向量
+        eigenvalues, eigenvectors = np.linalg.eig(standardized_covariance_matrix)
 
-    # 计算协方差矩阵的特征值和特征向量
-    eigenvalues, eigenvectors = np.linalg.eig(standardized_covariance_matrix)
+        sorted_eigenvalues = sorted(eigenvalues, reverse=True)
 
-    sorted_eigenvalues = sorted(eigenvalues, reverse=True)
+        # 按照特征值降序，对特征向量进行重新排序
+        sorted_indices = np.argsort(eigenvalues)[::-1]
+        sorted_eigenvectors = eigenvectors[:, sorted_indices]
 
-    # 按照特征值降序，对特征向量进行重新排序
-    sorted_indices = np.argsort(eigenvalues)[::-1]
-    sorted_eigenvectors = eigenvectors[:, sorted_indices]
+        # 选择前k个特征向量，得到降维矩阵
+        sorted_eigenvalues = eigenvalues[sorted_indices]
+        k = 1
+        while np.sum(sorted_eigenvalues[:k]) / np.sum(eigenvalues) < 0.8:
+            k += 1
+        print(f"# k = {k}")
 
-    # 选择前k个特征向量，得到降维矩阵
-    sorted_eigenvalues = eigenvalues[sorted_indices]
-    k = 1
-    while np.sum(sorted_eigenvalues[:k]) / np.sum(eigenvalues) < 0.8:
-        k += 1
-    print(k)
+        diagonal_matrix = np.diag(sorted_eigenvalues[:k])
+        selected_eigenvectors = sorted_eigenvectors[:, :k]
 
-    diagonal_matrix = np.diag(sorted_eigenvalues[:k])
-    selected_eigenvectors = sorted_eigenvectors[:, :k]
+        # 归一化测试数据
+        normalized_data_test1 = getAugmentedData(test_data1, lag)
+        normalized_data_test2 = getAugmentedData(test_data2, lag)
+        normalized_data_test1 = normalized(normalized_data_test1, mean, std)
+        normalized_data_test2 = normalized(normalized_data_test2, mean, std)
 
-    # 归一化测试数据
-    normalized_data_test1 = getAugmentedData(test_data1, lag)
-    normalized_data_test2 = getAugmentedData(test_data2, lag)
-    normalized_data_test1 = normalized(normalized_data_test1, mean, std)
-    normalized_data_test2 = normalized(normalized_data_test2, mean, std)
+        # 得到 T^2 和 Q
+        T_21, Ta21, Q1, Qa1 = spe(selected_eigenvectors, sorted_eigenvalues, normalized_data_test1, k)
+        T_22, Ta22, Q2, Qa2 = spe(selected_eigenvectors, sorted_eigenvalues, normalized_data_test2, k)
 
-    # 得到 T^2 和 Q
-    T_21, Ta21, Q1, Qa1 = spe(selected_eigenvectors, sorted_eigenvalues, normalized_data_test1, k)
-    T_22, Ta22, Q2, Qa2 = spe(selected_eigenvectors, sorted_eigenvalues, normalized_data_test2, k)
+        # 计算准确率
+        print("# Test Data 1:")
+        T_calculate_accuracy(T_21, Ta21, Q1, Qa1)
+        print("# Test Data 2:")
+        T_calculate_accuracy(T_22, Ta22, Q2, Qa2)
 
-    # 计算准确率
-    print("# Test Data 1:")
-    T_calculate_accuracy(T_21, Ta21, Q1, Qa1)
-    print("# Test Data 2:")
-    T_calculate_accuracy(T_22, Ta22, Q2, Qa2)
+        # 绘制图像
+        plt.subplot(1,2,1)
+        plt.plot(np.r_[0.:len(T_21)], T_21, label='Test Data 1')
+        plt.axhline(y=Ta21, color='r', linestyle='--', label='Threshold')
+        plt.xlabel('Data Index')
+        plt.ylabel('T Value')
+        plt.title(f'T Value Plot lag={lag}')
+        plt.legend()
+        plt.subplot(1,2,2)
+        plt.plot(np.r_[0.:len(Q1)], Q1, label='Test Data 1')
+        plt.axhline(y=Qa1, color='r', linestyle='--', label='Threshold')
+        plt.xlabel('Data Index')
+        plt.ylabel('Q Value')
+        plt.title(f'Q Value Plot lag={lag}')
+        plt.legend()
+        plt.show()
 
-    # 绘制图像
-    plt.subplot(2,2,1)
-    plt.plot(np.r_[0.:len(T_21)], T_21, label='Test Data 1')
-    plt.axhline(y=Ta21, color='r', linestyle='--', label='Threshold')
-    plt.xlabel('Data Index')
-    plt.ylabel('T Value')
-    plt.title('T Value Plot')
-    plt.legend()
-    plt.subplot(2,2,2)
-    plt.plot(np.r_[0.:len(T_22)], T_22, label='Test Data 2')
-    plt.axhline(y=Ta22, color='r', linestyle='--', label='Threshold')
-    plt.xlabel('Data Index')
-    plt.ylabel('T Value')
-    plt.title('T Value Plot')
-    plt.legend()
-    plt.subplot(2,2,3)
-    plt.plot(np.r_[0.:len(Q1)], Q1, label='Test Data 1')
-    plt.axhline(y=Qa1, color='r', linestyle='--', label='Threshold')
-    plt.xlabel('Data Index')
-    plt.ylabel('Q Value')
-    plt.title('Q Value Plot')
-    plt.legend()
-    plt.subplot(2,2,4)
-    plt.plot(np.r_[0.:len(Q2)], Q2, label='Test Data 2')
-    plt.axhline(y=Qa2, color='r', linestyle='--', label='Threshold')
-    plt.xlabel('Data Index')
-    plt.ylabel('Q Value')
-    plt.title('Q Value Plot')
-    plt.legend()
-    plt.show()
+    # plt.subplot(2,2,1)
+    # plt.plot(np.r_[0.:len(T_21)], T_21, label='Test Data 1')
+    # plt.axhline(y=Ta21, color='r', linestyle='--', label='Threshold')
+    # plt.xlabel('Data Index')
+    # plt.ylabel('T Value')
+    # plt.title('T Value Plot')
+    # plt.legend()
+    # plt.subplot(2,2,2)
+    # plt.plot(np.r_[0.:len(T_22)], T_22, label='Test Data 2')
+    # plt.axhline(y=Ta22, color='r', linestyle='--', label='Threshold')
+    # plt.xlabel('Data Index')
+    # plt.ylabel('T Value')
+    # plt.title('T Value Plot')
+    # plt.legend()
+    # plt.subplot(2,2,3)
+    # plt.plot(np.r_[0.:len(Q1)], Q1, label='Test Data 1')
+    # plt.axhline(y=Qa1, color='r', linestyle='--', label='Threshold')
+    # plt.xlabel('Data Index')
+    # plt.ylabel('Q Value')
+    # plt.title('Q Value Plot')
+    # plt.legend()
+    # plt.subplot(2,2,4)
+    # plt.plot(np.r_[0.:len(Q2)], Q2, label='Test Data 2')
+    # plt.axhline(y=Qa2, color='r', linestyle='--', label='Threshold')
+    # plt.xlabel('Data Index')
+    # plt.ylabel('Q Value')
+    # plt.title('Q Value Plot')
+    # plt.legend()
+    # plt.show()
